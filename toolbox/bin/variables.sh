@@ -60,13 +60,23 @@ LAYERS_DIR="$WORKING_DIR/layers"
 LAYERS=''
 CHANGED_LAYERS=''
 if [ -d "$LAYERS_DIR" ]; then
-  TF_STATE_BUCKET="${TF_STATE_BUCKET:-$TF_STATE_BUCKET_V2}"
-  TF_STATE_REGION="${TF_STATE_REGION:-$TF_STATE_REGION_V2}"
+  GIT_BRANCH=${CIRCLE_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}
 
+  if [ "$GIT_BRANCH" = 'master' ]; then
+    AWS_ACCOUNT_NUMBER=${TF_VAR_prod_aws_account_id:-$TF_VAR_aws_account_id}
+    TF_STATE_BUCKET="${TF_STATE_PROD_BUCKET:-${TF_STATE_BUCKET:-$TF_STATE_BUCKET_V2}}"
+    TF_STATE_REGION="${TF_STATE_PROD_REGION:-${TF_STATE_REGION:-$TF_STATE_REGION_V2}}"
+  else
+    AWS_ACCOUNT_NUMBER=${TF_VAR_dev_aws_account_id:-$TF_VAR_aws_account_id}
+    TF_STATE_BUCKET="${TF_STATE_DEV_BUCKET:-${TF_STATE_BUCKET:-$TF_STATE_BUCKET_V2}}"
+    TF_STATE_REGION="${TF_STATE_DEV_REGION:-${TF_STATE_REGION:-$TF_STATE_REGION_V2}}"
+  fi
+
+  [ -z "$AWS_ACCOUNT_NUMBER" ] && echo "Missing \$AWS_ACCOUNT_NUMBER" && exit 1
   [ -z "$TF_STATE_BUCKET" ] && echo "Missing \$TF_STATE_BUCKET" && exit 1
   [ -z "$TF_STATE_REGION" ] && echo "Missing \$TF_STATE_REGION" && exit 1
 
-  echo "Using bucket for state backend: $TF_STATE_BUCKET"
+  echo "Using bucket for state backend: $TF_STATE_BUCKET of account $AWS_ACCOUNT_NUMBER"
 
   LAYERS=$(find "$LAYERS_DIR"/* -maxdepth 0 -type d -exec basename '{}' \; | sort -n)
 
@@ -83,7 +93,6 @@ if [ -d "$LAYERS_DIR" ]; then
   if [ -f "$WORKSPACE_DIR/changed_layers" ]; then
     CHANGED_LAYERS=$(cat "$WORKSPACE_DIR/changed_layers")
   else
-    GIT_BRANCH=${CIRCLE_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}
     if ! aws s3 ls s3://${TF_STATE_BUCKET}/tf-applied-revision.sha | grep -q tf-applied-revision.sha; then
       if [ "$GIT_BRANCH" = 'master' ]; then
         echo "No tf-applied-revision.sha file found in s3://${TF_STATE_BUCKET}. Considering all layers changed."

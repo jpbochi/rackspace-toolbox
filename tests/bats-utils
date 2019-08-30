@@ -35,4 +35,5 @@ function unset_vars() {
   export TF_STATE_REGION='test-region'
   export TF_STATE_BUCKET_V2='test-bucket-v2'
   export TF_STATE_REGION_V2='test-region-v2'
+  export TF_VAR_aws_account_id='aws-account-number'
 }

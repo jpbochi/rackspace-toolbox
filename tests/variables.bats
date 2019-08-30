@@ -149,6 +149,70 @@ function teardown() {
   diff <(echo "$CHANGED_LAYERS") <(echo 'base_network')
 }
 
+@test "sets AWS_ACCOUNT_NUMBER to prod AWS account when on master" {
+  CIRCLE_BRANCH='master'
+  TF_VAR_prod_aws_account_id='prod-aws-account-number'
+  source variables.sh
+  [ "$AWS_ACCOUNT_NUMBER" = "prod-aws-account-number" ]
+}
+
+@test "sets AWS_ACCOUNT_NUMBER to dev AWS account when on a branch" {
+  CIRCLE_BRANCH='anybranch'
+  TF_VAR_dev_aws_account_id='dev-aws-account-number'
+  source variables.sh
+  [ "$AWS_ACCOUNT_NUMBER" = "dev-aws-account-number" ]
+}
+
+@test "sets AWS_ACCOUNT_NUMBER to default TF VAR if no AWS account environments set" {
+  source variables.sh
+  [ "$AWS_ACCOUNT_NUMBER" = "aws-account-number" ]
+}
+
+@test "exits with 1 if AWS_ACCOUNT_NUMBER is not set but there are layers" {
+  unset TF_VAR_aws_account_id
+  run source variables.sh
+  echo ">> output:"
+  echo "$output"
+  [ "$status" = 1 ]
+}
+
+@test "does not fail if AWS_ACCOUNT_NUMBER is not set if there are no layers" {
+  unset TF_VAR_aws_account_id
+  rm -r layers
+  source variables.sh
+
+  echo 'Expected ./workspace/changed_layers to exist'
+  [ -r ./workspace/changed_layers ]
+}
+
+@test "sets TF_STATE_BUCKET to TF_STATE_PROD_BUCKET when on master" {
+  CIRCLE_BRANCH='master'
+  TF_STATE_PROD_BUCKET='prod-bucket'
+  source variables.sh
+  [ "$TF_STATE_BUCKET" = "prod-bucket" ]
+}
+
+@test "sets TF_STATE_BUCKET to TF_STATE_DEV_BUCKET when on a branch" {
+  CIRCLE_BRANCH='anybranch'
+  TF_STATE_DEV_BUCKET='dev-bucket'
+  source variables.sh
+  [ "$TF_STATE_BUCKET" = "dev-bucket" ]
+}
+
+@test "sets TF_STATE_REGION to TF_STATE_PROD_REGION when on master" {
+  CIRCLE_BRANCH='master'
+  TF_STATE_PROD_REGION='prod-region'
+  source variables.sh
+  [ "$TF_STATE_REGION" = "prod-region" ]
+}
+
+@test "sets TF_STATE_REGION to TF_STATE_DEV_REGION when on a branch" {
+  CIRCLE_BRANCH='anybranch'
+  TF_STATE_DEV_REGION='dev-region'
+  source variables.sh
+  [ "$TF_STATE_REGION" = "dev-region" ]
+}
+
 @test "sets TF_STATE_BUCKET to TF_STATE_BUCKET if TF_STATE_BUCKET is set" {
   source variables.sh
   [ "$TF_STATE_BUCKET" = "test-bucket" ]
